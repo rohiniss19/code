@@ -1,0 +1,100 @@
+
+import groovy.json.JsonOutput
+import java.time.format.DateTimeFormatter
+import java.time.LocalDateTime
+
+pipeline {
+    agent {
+        label "adasdai_windows_server_20h2"
+    }
+    
+    stages {
+       stage('Git checkout') {
+            steps {
+               
+               //cleaning workspace before build
+                cleanWs()
+                 // Get some code from a GitHub repository
+                checkout([$class: 'GitSCM',
+                    branches: [[name: "main"]],
+                    doGenerateSubmoduleConfigurations: true,
+                    extensions: [],
+                    submoduleCfg: [],
+                    userRemoteConfigs: [[
+                        credentialsId: '',
+                        url: 'https://github.com/rohiniss19/submodule2_Test.git']]])
+
+            }
+        }
+     
+         stage('Tag creation'){
+            steps {
+                script {
+              // createTag("Tag2")
+                createTag_submodule()
+                }
+            }
+         }
+        
+      
+    }
+    
+}
+
+ public void createTag(String tagName) {
+     
+         if(fileExists('.git')){
+          print("Creating Tag and Pushing to remote ...")
+           bat """
+                            git config --global user.email "rohinissankannavar@gmail.com"
+                            git config --global user.name "Rohini"
+                            git remote add origin https://github.com/rohiniss19/submodule2_Test.git
+
+                            git tag -a ${tagName} -m "Tag created by Jenkins"
+                            git push --tags
+                        """
+
+      
+         print("Tag Created succesfully")
+         }
+        
+    }
+    
+    
+ public void createTag_submodule() {
+       if(fileExists('submodules.json')){
+        def submodule_config = readJSON file: "${env.WORKSPACE}/submodules.json"
+        println "The submodules present are ${submodule_config}" 
+        println ""
+        def submodule_path = submodule_config['submodules']
+        echo "${submodule_path}"
+        
+        
+        for (def submodule in submodule_path){
+            
+             echo "$submodule.name"
+             echo "$submodule.path"
+             echo "$submodule.Tag_Prefix"
+             def tagName = TagName (submodule.Tag_Prefix)
+             
+             bat """ cd ${env.WORKSPACE}/${submodule.path} """
+             print("Creating Submodule Tag and Pushing to remote ...")
+             bat """ 
+             git config --global user.email "rohinissankannavar@gmail.com"
+             git config --global user.name "Rohini"
+             git tag -a ${tagName} -m "Submodule Tag created by Jenkins"
+            
+             """
+        }
+       }
+        else {
+            println ("submodules.json is not present")
+            
+        }
+ }
+ 
+ public String TagName (Submodule_Name){
+     def Tagname = Submodule_Name + "tag100"
+     return Tagname
+ }
+ 
